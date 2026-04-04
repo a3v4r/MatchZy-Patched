@@ -33,9 +33,23 @@ jobs:
       - name: Build and Release Artifacts
         run: |
           CSSHARP_VERSION=$(grep -Po '<PackageReference Include="CounterStrikeSharp.API" Version="\K\d+(\.\d+)*' MatchZy.csproj)
-          echo "Creating MatchZy base package with version: $MATCHZY_VERSION"
+          MATCHZY_VERSION=$(grep -oP 'ModuleVersion\s*=>\s*"\K[^"]*' MatchZy.cs)
+          echo "Creating MatchZy package with version: $MATCHZY_VERSION"
+          
+          # Create folder structure
+          mkdir -p package/addons/counterstrikesharp/plugins/MatchZy
+          mkdir -p package/cfg
+          
+          # Publish plugin
           dotnet publish -o package/addons/counterstrikesharp/plugins/MatchZy
-          cp -r cfg package 
+          
+          # Remove API DLL if present
+          rm -f package/addons/counterstrikesharp/plugins/MatchZy/CounterStrikeSharp.API.dll
+          
+          # Copy cfg folder from source
+          cp -r cfg/MatchZy package/cfg/
+          
+          # Zip it
           cd package && zip -q -r ../MatchZy-$MATCHZY_VERSION.zip * && cd ..
     
           echo "Creating package with CounterStrikeSharp (CSSharp) v$CSSHARP_VERSION for Linux"
