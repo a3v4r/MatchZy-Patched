@@ -66,6 +66,11 @@ namespace MatchZy
         {
             if (player == null) return;
             Log($"[!ready command] Sent by: {player.UserId} readyAvailable: {readyAvailable} matchStarted: {matchStarted}");
+            if (IsJoinReadyMode() && readyAvailable && !matchStarted)
+            {
+                PrintToPlayerChat(player, Localizer["matchzy.ready.joinmode"]);
+                return;
+            }
             if (readyAvailable && !matchStarted)
             {
                 if (player.UserId.HasValue)
@@ -97,6 +102,11 @@ namespace MatchZy
         {
             if (player == null) return;
             Log($"[!unready command] {player.UserId}");
+            if (IsJoinReadyMode() && readyAvailable && !matchStarted)
+            {
+                PrintToPlayerChat(player, Localizer["matchzy.ready.joinmode"]);
+                return;
+            }
             if (readyAvailable && !matchStarted)
             {
                 if (player.UserId.HasValue)
@@ -241,6 +251,13 @@ namespace MatchZy
                     return;
                 }
 
+                // Technical pause: the pausing team can cancel it before it takes effect, and after the time limit any team can unpause.
+                if (player != null && (player.TeamNum == 2 || player.TeamNum == 3))
+                {
+                    Team unpausingTeam = player.TeamNum == 2 ? reverseTeamSides["TERRORIST"] : reverseTeamSides["CT"];
+                    if (HandleTechPauseUnpause(player, unpausingTeam == matchzyTeam1 ? 1 : 2)) return;
+                }
+
                 string unpauseTeamName = "Admin";
                 string remainingUnpauseTeam = "Admin";
                 if (player?.TeamNum == 2)
@@ -269,18 +286,12 @@ namespace MatchZy
                 if ((bool)unpauseData["t"] && (bool)unpauseData["ct"])
                 {
                     PrintToAllChat(Localizer["matchzy.pause.teamsunpausedthematch"]);
-                    Server.ExecuteCommand("mp_unpause_match;");
-                    isPaused = false;
-                    unpauseData["ct"] = false;
-                    unpauseData["t"] = false;
+                    UnpauseMatch();
                 }
                 else if (unpauseTeamName == "Admin")
                 {
                     PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
-                    Server.ExecuteCommand("mp_unpause_match;");
-                    isPaused = false;
-                    unpauseData["ct"] = false;
-                    unpauseData["t"] = false;
+                    UnpauseMatch();
                 }
                 else
                 {
@@ -464,13 +475,45 @@ namespace MatchZy
         [ConsoleCommand("css_forceend", "Ends and resets the current match")]
         public void OnEndMatchCommand(CCSPlayerController? player, CommandInfo? command)
         {
+            string winnerArg = command?.ArgCount > 1 ? command.ArgByIndex(1) : "";
+            HandleEndMatchCommand(player, winnerArg);
+        }
+
+        // winnerArg: "" to cancel the match, or "team1" / "team2" to end it with that team as the winner.
+        public void HandleEndMatchCommand(CCSPlayerController? player, string winnerArg)
+        {
             if (IsPlayerAdmin(player, "css_endmatch", "@css/config"))
             {
                 if (!isPractice)
                 {
+                    winnerArg = winnerArg.Trim().ToLowerInvariant();
+                    Team? forcedWinner = winnerArg switch
+                    {
+                        "team1" => matchzyTeam1,
+                        "team2" => matchzyTeam2,
+                        _ => null,
+                    };
+                    if (winnerArg != "" && forcedWinner == null)
+                    {
+                        ReplyToUserCommand(player, Localizer["matchzy.cc.usage", ".forceend [team1|team2]"]);
+                        return;
+                    }
+                    if (forcedWinner != null && !isMatchSetup && !matchStarted)
+                    {
+                        // Nothing to award: no match is loaded and none has started.
+                        ReplyToUserCommand(player, Localizer["matchzy.cc.endmatchnomatch"]);
+                        return;
+                    }
                     // Server.PrintToChatAll($"{chatPrefix} An admin force-ended the match.");
                     PrintToAllChat(Localizer["matchzy.cc.endmatch"]);
-                    ResetMatch();
+                    if ((isMatchSetup || matchStarted) && !seriesEnded)
+                    {
+                        ForceEndSeries(forcedWinner);
+                    }
+                    else
+                    {
+                        ResetMatch();
+                    }
                 }
                 else
                 {
@@ -492,6 +535,13 @@ namespace MatchZy
             {
                 if (!isPractice)
                 {
+                    if (matchStarted && liveMatchId != -1 && !seriesEnded)
+                    {
+                        // The restarted match is abandoned: give it an end time (with no winner) so it does not look like it is still running.
+                        long matchId = liveMatchId;
+                        (int team1SeriesScore, int team2SeriesScore) = (matchzyTeam1.seriesScore, matchzyTeam2.seriesScore);
+                        database.SetMatchEndData(matchId, "", team1SeriesScore, team2SeriesScore);
+                    }
                     ResetMatch();
                 }
                 else
@@ -517,7 +567,7 @@ namespace MatchZy
         private void OnMapReloadCommand(CCSPlayerController? player, CommandInfo? command)
         {
 
-            if (!IsPlayerAdmin(player))
+            if (!IsPlayerAdmin(player, "css_rmap", "@css/map"))
             {
                 SendPlayerNotAdminMessage(player);
                 return;
@@ -525,12 +575,12 @@ namespace MatchZy
             string currentMapName = Server.MapName;
             if (long.TryParse(currentMapName, out _))
             { // Check if mapName is a long for workshop map ids
-                Server.ExecuteCommand($"bot_kick");
+                KickBots();
                 Server.ExecuteCommand($"host_workshop_map \"{currentMapName}\"");
             }
             else if (Server.IsMapValid(currentMapName))
             {
-                Server.ExecuteCommand($"bot_kick");
+                KickBots();
                 Server.ExecuteCommand($"changelevel \"{currentMapName}\"");
             }
             else
@@ -653,6 +703,7 @@ namespace MatchZy
                 SendPlayerNotAdminMessage(player);
                 return;
             }
+            Log($"[RCON] {player?.PlayerName ?? "Console"} ({player?.SteamID.ToString() ?? "-"}) executed: {MatchZySecurity.RedactConsoleCommand(command.ArgString)}");
             Server.ExecuteCommand(command.ArgString);
             // ReplyToUserCommand(player, "Command sent successfully!");
             ReplyToUserCommand(player, Localizer["matchzy.cc.rcon"]);

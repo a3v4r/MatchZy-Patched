@@ -19,12 +19,15 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0'
+          dotnet-version: '10.0'
+
+      - name: Run unit tests
+        run: dotnet test tests/MatchZy.Tests -c Release
 
       - name: Build and Package
         run: |
           MATCHZY_VERSION=$(grep -oP 'ModuleVersion\s*=>\s*"\K[^"]*' MatchZy.cs)
-          if [ -z "$MATCHZY_VERSION" ]; then MATCHZY_VERSION="0.8.15-patched"; fi
+          if [ -z "$MATCHZY_VERSION" ]; then MATCHZY_VERSION="0.9.1-patched"; fi
           echo "MATCHZY_VERSION=$MATCHZY_VERSION" >> $GITHUB_ENV
           
           echo "Creating MatchZy package v$MATCHZY_VERSION"
@@ -42,10 +45,15 @@ jobs:
           # Remove API DLL (prevents conflicts)
           rm -f package/addons/counterstrikesharp/plugins/MatchZy/CounterStrikeSharp.API.dll
           
-          # Copy config files
+          # Copy config files (server data files are created by the plugin when missing)
           if [ -d "cfg/MatchZy" ]; then
             cp -r cfg/MatchZy/* package/cfg/MatchZy/
           fi
+          rm -f package/cfg/MatchZy/admins.json package/cfg/MatchZy/database.json package/cfg/MatchZy/savednades.json package/cfg/MatchZy/whitelist.cfg
+
+          # Gamedata (signatures/offsets used by MatchZy since 0.9.0)
+          mkdir -p package/addons/counterstrikesharp/gamedata
+          cp gamedata/matchzy.json package/addons/counterstrikesharp/gamedata/
           
           # Zip it
           cd package && zip -r ../MatchZy-$MATCHZY_VERSION.zip * && cd ..

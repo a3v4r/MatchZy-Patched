@@ -14,9 +14,6 @@ namespace MatchZy
         public FakeConVar<bool> smokeColorEnabled = new("matchzy_smoke_color_enabled", "Whether player-specific smoke color is enabled or not. Default: false", false);
         public FakeConVar<bool> techPauseEnabled = new("matchzy_enable_tech_pause", "Whether .tech command is enabled or not. Default: true", true);
         public FakeConVar<string> techPausePermission  = new("matchzy_tech_pause_flag", "Flag required to use tech pause", "");
-        public FakeConVar<int> techPauseDuration  = new("matchzy_tech_pause_duration", "Tech pause duration in seconds. Default value: 300", 300);
-
-        public FakeConVar<int> maxTechPausesAllowed  = new("matchzy_max_tech_pauses_allowed", " Max tech pauses allowed. Default value: 2", 2);
 
         public FakeConVar<bool> everyoneIsAdmin = new("matchzy_everyone_is_admin", "If set to true, all the players will have admin privilege. Default: false", false);
 
@@ -34,54 +31,54 @@ namespace MatchZy
         public void MatchZyWLConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            isWhitelistRequired = bool.TryParse(args, out bool isWhitelistRequiredValue) ? isWhitelistRequiredValue : args != "0" && isWhitelistRequired;
+            isWhitelistRequired = ParseBoolSetting(args, isWhitelistRequired);
         }
         
         [ConsoleCommand("matchzy_knife_enabled_default", "Whether knife round is enabled by default or not. Default value: true")]
         public void MatchZyKnifeConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            isKnifeRequired = bool.TryParse(args, out bool isKnifeRequiredValue) ? isKnifeRequiredValue : args != "0" && isKnifeRequired;
+            isKnifeRequired = ParseBoolSetting(args, isKnifeRequired);
         }
 
         [ConsoleCommand("matchzy_playout_enabled_default", "Whether knife round is enabled by default or not. Default value: true")]
         public void MatchZyPlayoutConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            isPlayOutEnabled = bool.TryParse(args, out bool isPlayOutEnabledValue) ? isPlayOutEnabledValue : args != "0" && isPlayOutEnabled;
+            isPlayOutEnabled = ParseBoolSetting(args, isPlayOutEnabled);
         }
 
         [ConsoleCommand("matchzy_save_nades_as_global_enabled", "Whether nades should be saved globally instead of being privated to players by default or not. Default value: false")]
         public void MatchZySaveNadesAsGlobalConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            isSaveNadesAsGlobalEnabled = bool.TryParse(args, out bool isSaveNadesAsGlobalEnabledValue) ? isSaveNadesAsGlobalEnabledValue : args != "0" && isSaveNadesAsGlobalEnabled;
+            isSaveNadesAsGlobalEnabled = ParseBoolSetting(args, isSaveNadesAsGlobalEnabled);
         }
 
         [ConsoleCommand("matchzy_kick_when_no_match_loaded", "Whether to kick all clients and prevent anyone from joining the server if no match is loaded. Default value: false")]
         public void MatchZyMatchModeOnlyConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            matchModeOnly = bool.TryParse(args, out bool matchModeOnlyValue) ? matchModeOnlyValue : args != "0" && matchModeOnly;
+            matchModeOnly = ParseBoolSetting(args, matchModeOnly);
         }
 
         [ConsoleCommand("matchzy_reset_cvars_on_series_end", "Whether parameters from the cvars section of a match configuration are restored to their original values when a series ends. Default value: true")]
         public void MatchZyResetCvarsOnSeriesEndConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            resetCvarsOnSeriesEnd = bool.TryParse(args, out bool resetCvarsOnSeriesEndValue) ? resetCvarsOnSeriesEndValue : args != "0" && resetCvarsOnSeriesEnd;
+            resetCvarsOnSeriesEnd = ParseBoolSetting(args, resetCvarsOnSeriesEnd);
         }
 
         [ConsoleCommand("matchzy_minimum_ready_required", "Minimum ready players required to start the match. Default: 1")]
@@ -99,7 +96,12 @@ namespace MatchZy
             if (command.ArgCount == 2)
             {
                 string path = command.ArgByIndex(1);
-                if (path[0] == '/' || path[0] == '.' || path[^1] != '/' || path.Contains("//"))
+                if (path == "")
+                {
+                    // Empty string means the csgo root, as documented.
+                    demoPath = "";
+                }
+                else if (path[0] == '/' || path[0] == '.' || path[^1] != '/' || path.Contains("//"))
                 {
                     Log($"matchzy_demo_path must end with a slash and must not start with a slash or dot. It will be reset to an empty string! Current value: {demoPath}");
                 }
@@ -129,9 +131,9 @@ namespace MatchZy
         public void MatchZyDemoRecordingEnabled(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            isDemoRecordingEnabled = bool.TryParse(args, out bool isDemoRecordingEnabledValue) ? isDemoRecordingEnabledValue : args != "0" && isDemoRecordingEnabled;
+            isDemoRecordingEnabled = ParseBoolSetting(args, isDemoRecordingEnabled);
         }
 
         [ConsoleCommand("get5_demo_upload_url", "If defined, recorded demos will be uploaded to this URL once the map ends.")]
@@ -143,7 +145,7 @@ namespace MatchZy
             if (url.Trim() == "") return;
             if (!IsValidUrl(url))
             {
-                Log($"[MatchZyDemoUploadURL] Invalid URL: {url}. Please provide a valid URL for uploading the demo!");
+                Log($"[MatchZyDemoUploadURL] Invalid URL: {MatchZySecurity.RedactUrl(url)}. Please provide a valid URL for uploading the demo!");
                 return;
             }
             demoUploadURL = url;
@@ -153,27 +155,27 @@ namespace MatchZy
         public void MatchZyStopCommandEnabled(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            isStopCommandAvailable = bool.TryParse(args, out bool isStopCommandAvailableValue) ? isStopCommandAvailableValue : args != "0" && isStopCommandAvailable;
+            isStopCommandAvailable = ParseBoolSetting(args, isStopCommandAvailable);
         }
 
         [ConsoleCommand("matchzy_use_pause_command_for_tactical_pause", "Whether to use !pause/.pause command for tactical pause or normal pause (unpauses only when both teams use unpause command, for admin force-unpauses the game). Default value: false")]
         public void MatchZyPauseForTacticalCommand(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            isPauseCommandForTactical = bool.TryParse(args, out bool isPauseCommandForTacticalValue) ? isPauseCommandForTacticalValue : args != "0" && isPauseCommandForTactical;
+            isPauseCommandForTactical = ParseBoolSetting(args, isPauseCommandForTactical);
         }
 
         [ConsoleCommand("matchzy_pause_after_restore", "Whether to pause the match after a round is restored using matchzy. Default value: true")]
         public void MatchZyPauseAfterStopEnabled(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            pauseAfterRoundRestore = bool.TryParse(args, out bool pauseAfterRoundRestoreValue) ? pauseAfterRoundRestoreValue : args != "0" && pauseAfterRoundRestore;
+            pauseAfterRoundRestore = ParseBoolSetting(args, pauseAfterRoundRestore);
         }
 
         [ConsoleCommand("matchzy_chat_prefix", "Default value of chat prefix for MatchZy messages. Default value: [{Green}MatchZy{Default}]")]
@@ -181,7 +183,7 @@ namespace MatchZy
         {
             if (player != null) return;
 
-            string args = command.ArgString.Trim();
+            string args = GetSettingArgument(command);
 
             if (string.IsNullOrEmpty(args))
             {
@@ -201,11 +203,11 @@ namespace MatchZy
         {
             if (player != null) return;
 
-            string args = command.ArgString.Trim();
+            string args = GetSettingArgument(command);
 
             if (string.IsNullOrEmpty(args))
             {
-                chatPrefix = $"[{ChatColors.Red}ADMIN{ChatColors.Default}]";
+                adminChatPrefix = $"[{ChatColors.Red}ADMIN{ChatColors.Default}]";
                 return;
             }
 
@@ -245,7 +247,7 @@ namespace MatchZy
         public void MatchZyAutoStartConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
             if (int.TryParse(args, out int autoStartModeValue))
             {
@@ -259,16 +261,16 @@ namespace MatchZy
         public void MatchZyAllowForceReadyConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
-            allowForceReady = bool.TryParse(args, out bool allowForceReadyValue) ? allowForceReadyValue : args != "0" && allowForceReady;
+            allowForceReady = ParseBoolSetting(args, allowForceReady);
         }
 
         [ConsoleCommand("matchzy_max_saved_last_grenades", "Maximum number of grenade history that may be saved per-map, per-client. Set to 0 to disable. Default value: 512")]
         public void MatchZyMaxSavedLastGrenadesConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            string args = command.ArgString;
+            string args = GetSettingArgument(command);
 
             if (int.TryParse(args, out int maxLastGrenadesSavedLimitValue))
             {
@@ -291,7 +293,7 @@ namespace MatchZy
             if (url.Trim() == "") return;
             if (!IsValidUrl(url))
             {
-                Log($"[MatchZyBackupUploadURL] Invalid URL: {url}. Please provide a valid URL for uploading the backup!");
+                Log($"[MatchZyBackupUploadURL] Invalid URL: {MatchZySecurity.RedactUrl(url)}. Please provide a valid URL for uploading the backup!");
                 return;
             }
             backupUploadURL = url;
