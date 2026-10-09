@@ -131,7 +131,9 @@ namespace MatchZy
         }
 
         public override void Load(bool hotReload) {
-            
+
+            UseMatchZyLanguage();
+
             LoadAdmins();
 
             database.InitializeDatabase(ModuleDirectory);
