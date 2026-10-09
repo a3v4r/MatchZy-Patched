@@ -105,7 +105,9 @@ namespace MatchZy
         private void TvRecord(string csgoRelativePath)
         {
             string fullPath = CsgoFullPath(csgoRelativePath);
-            Server.ExecuteCommand($"tv_record {CsgoPathArg(csgoRelativePath)}");
+            // On Windows tv_record rejects absolute paths ("invalid path") and no demo is written; relative ones go to csgo/.
+            string pathArg = OperatingSystem.IsWindows() ? $"\"{csgoRelativePath.Replace('\\', '/')}\"" : CsgoPathArg(csgoRelativePath);
+            Server.ExecuteCommand($"tv_record {pathArg}");
 
             AddTimer(5.0f, () =>
             {
