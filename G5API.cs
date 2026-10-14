@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
@@ -42,6 +43,22 @@ namespace MatchZy
 
         [JsonPropertyName("maps")]
         public string[]? Maps { get; set; } = null;
+
+        // Not part of Get5: the timer the game shows right now, for panels (only while live).
+        [JsonPropertyName("round_clock")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Get5RoundClock? RoundClock { get; set; } = null;
+    }
+
+    public class Get5RoundClock
+    {
+        // freezetime, live, bomb, round_over, halftime, timeout_ct, timeout_t
+        [JsonPropertyName("phase")]
+        public required string Phase { get; init; }
+
+        // Seconds left on that timer
+        [JsonPropertyName("seconds")]
+        public required float Seconds { get; init; }
     }
 
     public class Get5StatusTeam
@@ -135,9 +152,32 @@ namespace MatchZy
             if (gamestate == Get5GameState.Live)
             {
                 get5Status.RoundNumber = GetRoundNumer();
+                get5Status.RoundClock = GetRoundClock();
             }
 
             command.ReplyToCommand(JsonSerializer.Serialize(get5Status));
+        }
+
+        private Get5RoundClock GetRoundClock()
+        {
+            var rules = GetGameRules();
+            float now = Server.CurrentTime;
+            string phase;
+            float ends;
+            if (IsHalfTimePhase()) (phase, ends) = ("halftime", rules.RestartRoundTime);
+            else if (rules.RoundWinStatus != 0) (phase, ends) = ("round_over", rules.RestartRoundTime);
+            // A timeout called during a round is already "active" but only starts in the next freeze time
+            else if (rules.FreezePeriod && rules.CTTimeOutActive) (phase, ends) = ("timeout_ct", now + rules.CTTimeOutRemaining);
+            else if (rules.FreezePeriod && rules.TerroristTimeOutActive) (phase, ends) = ("timeout_t", now + rules.TerroristTimeOutRemaining);
+            else if (rules.FreezePeriod) (phase, ends) = ("freezetime", rules.RoundStartTime);
+            else
+            {
+                var bomb = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4")
+                    .FirstOrDefault(c => c.IsValid && c.BombTicking && !c.HasExploded && !c.BombDefused);
+                if (bomb != null) (phase, ends) = ("bomb", bomb.C4Blow);
+                else (phase, ends) = ("live", rules.RoundStartTime + rules.RoundTime);
+            }
+            return new Get5RoundClock { Phase = phase, Seconds = MathF.Round(MathF.Max(0, ends - now), 1) };
         }
 
         // Per team, as Get5 reports it: side "ct" / "t", whether that team is ready, and how many of its players are connected.
