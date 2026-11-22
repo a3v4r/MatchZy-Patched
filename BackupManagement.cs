@@ -34,11 +34,10 @@ namespace MatchZy
         public void SetupRoundBackupFile()
         {
             string backupFilePrefix = $"matchzy_{liveMatchId}_{matchConfig.CurrentMapNumber}";
-            Server.ExecuteCommand($"mp_backup_round_file {CsgoPathArg(backupFilePrefix)}");
+            Server.ExecuteCommand($"mp_backup_round_file {CsgoRelativeArg(backupFilePrefix)}");
         }
 
-        // Relative paths in tv_record / mp_backup_* resolve under csgo/addons/metamod when Metamod is installed, so files are
-        // passed as absolute csgo paths (forward slashes, quoted).
+        // Absolute csgo path, for files the plugin reads or writes itself.
         private static string CsgoFullPath(string csgoRelativePath)
         {
             return Path.Join(Server.GameDirectory, "csgo", csgoRelativePath).Replace('\\', '/');
@@ -48,6 +47,13 @@ namespace MatchZy
         {
             // Always quoted: the console splits arguments at spaces and at ':', which every Windows path has (C:/...).
             return $"\"{CsgoFullPath(csgoRelativePath)}\"";
+        }
+
+        // mp_backup_round_file / mp_backup_restore_load_file reject absolute paths ("Rejecting round backup file path");
+        // relative ones resolve under csgo/ (also with Metamod installed).
+        private static string CsgoRelativeArg(string csgoRelativePath)
+        {
+            return $"\"{csgoRelativePath.Replace('\\', '/')}\"";
         }
 
         [ConsoleCommand("css_stop", "Restore the backup of the current round (Both teams need to type .stop to restore the current round)")]
@@ -423,7 +429,7 @@ namespace MatchZy
                 string restoredFileName = fileName;
                 int restoredRound = int.TryParse(roundNumber, out int parsedRound) ? parsedRound : GetRoundNumer();
                 AddTimer(restoreTimer, () => {
-                    Server.ExecuteCommand($"mp_backup_restore_load_file {CsgoPathArg(restoreFileName)}");
+                    Server.ExecuteCommand($"mp_backup_restore_load_file {CsgoRelativeArg(restoreFileName)}");
                     StartDemoRecording();
                     SendBackupRestoredEvents(restoredFileName, restoredRound);
 
