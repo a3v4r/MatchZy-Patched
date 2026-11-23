@@ -137,7 +137,7 @@ namespace MatchZy
                 get5Status.MapNumber = matchConfig.CurrentMapNumber;
             }
 
-            if (isMatchSetup)
+            if (isMatchSetup || matchStarted)
             {
                 (int team1, int team2) = GetTeamsScore();
                 get5Status.Team1 = GetGet5StatusTeam(matchzyTeam1, team1);
@@ -214,9 +214,11 @@ namespace MatchZy
             Get5GameState state = Get5GameState.None;
 
             // The order of checks have been checked to work. Please be carefull if you change the order.
-            if (!isMatchSetup)
+            // A match started without a config (players type .ready) is reported too: panels need its match id
+            // and round number to list and restore its round backups
+            if (!isMatchSetup && !matchStarted)
             {
-                state = Get5GameState.None; // If the match has not been set up, then the state is none
+                state = Get5GameState.None; // No match: neither set up nor started
             }
             else if (isVeto)
             {
