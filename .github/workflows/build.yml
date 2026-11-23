@@ -27,7 +27,7 @@ jobs:
       - name: Build and Package
         run: |
           MATCHZY_VERSION=$(grep -oP 'ModuleVersion\s*=>\s*"\K[^"]*' MatchZy.cs)
-          if [ -z "$MATCHZY_VERSION" ]; then MATCHZY_VERSION="0.9.2-patched"; fi
+          if [ -z "$MATCHZY_VERSION" ]; then MATCHZY_VERSION="0.9.2-patched.1"; fi
           echo "MATCHZY_VERSION=$MATCHZY_VERSION" >> $GITHUB_ENV
           
           echo "Creating MatchZy package v$MATCHZY_VERSION"
