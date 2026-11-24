@@ -1,6 +1,8 @@
 MatchZy - Match Plugin for CS2!
 ==============
 
+**English** | [Русский](README.ru.md)
+
 MatchZy is a plugin for CS2 (Counter Strike 2) for running and managing practice/pugs/scrims/matches with easy configuration!
 
 > **This is a fork** of [shobhit-pathak/MatchZy](https://github.com/shobhit-pathak/MatchZy) for LAN tournaments, used by [Matchdesk](https://github.com/a3v4r/Matchdesk). The fork notes come first; everything from "Feature Highlights" on is the original description.
