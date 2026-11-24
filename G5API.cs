@@ -44,7 +44,7 @@ namespace MatchZy
         [JsonPropertyName("maps")]
         public string[]? Maps { get; set; } = null;
 
-        // Not part of Get5: the timer the game shows right now, for panels (only while live).
+        // not in Get5: current in-game timer, only while live
         [JsonPropertyName("round_clock")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Get5RoundClock? RoundClock { get; set; } = null;
@@ -56,7 +56,6 @@ namespace MatchZy
         [JsonPropertyName("phase")]
         public required string Phase { get; init; }
 
-        // Seconds left on that timer
         [JsonPropertyName("seconds")]
         public required float Seconds { get; init; }
     }
@@ -218,7 +217,7 @@ namespace MatchZy
             // and round number to list and restore its round backups
             if (!isMatchSetup && !matchStarted)
             {
-                state = Get5GameState.None; // No match: neither set up nor started
+                state = Get5GameState.None;
             }
             else if (isVeto)
             {

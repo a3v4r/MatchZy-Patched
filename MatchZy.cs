@@ -141,8 +141,7 @@ namespace MatchZy
             // Ready-up time limit (get5_time_to_start), checked every second like Get5's Timer_CheckReady. Not tied to a map.
             AddTimer(1.0f, CheckReadyTime, TimerFlags.REPEAT);
 
-            // This sets default config ConVars. Next frame: on a cold server start the command buffer can run during Load,
-            // before the [ConsoleCommand] settings (chat prefix, tech pauses, ...) are registered, and they were ignored.
+            // next frame: on a cold start the buffer can run before the [ConsoleCommand] convars exist and they get ignored
             Server.NextFrame(() => Server.ExecuteCommand("execifexists MatchZy/config.cfg"));
 
             teamSides[matchzyTeam1] = "CT";

@@ -37,7 +37,6 @@ namespace MatchZy
             Server.ExecuteCommand($"mp_backup_round_file {CsgoRelativeArg(backupFilePrefix)}");
         }
 
-        // Absolute csgo path, for files the plugin reads or writes itself.
         private static string CsgoFullPath(string csgoRelativePath)
         {
             return Path.Join(Server.GameDirectory, "csgo", csgoRelativePath).Replace('\\', '/');

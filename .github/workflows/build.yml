@@ -32,30 +32,26 @@ jobs:
           
           echo "Creating MatchZy package v$MATCHZY_VERSION"
           
-          # Create folder structure
           mkdir -p package/addons/counterstrikesharp/plugins/MatchZy
           mkdir -p package/cfg/MatchZy
           
-          # Publish plugin
           dotnet publish MatchZy.csproj -c Release -o publish
           
-          # Copy binaries
           cp -r publish/* package/addons/counterstrikesharp/plugins/MatchZy/
           
-          # Remove API DLL (prevents conflicts)
+          # the API dll comes with CounterStrikeSharp
           rm -f package/addons/counterstrikesharp/plugins/MatchZy/CounterStrikeSharp.API.dll
           
-          # Copy config files (server data files are created by the plugin when missing)
+          # server data files are created by the plugin
           if [ -d "cfg/MatchZy" ]; then
             cp -r cfg/MatchZy/* package/cfg/MatchZy/
           fi
           rm -f package/cfg/MatchZy/admins.json package/cfg/MatchZy/database.json package/cfg/MatchZy/savednades.json package/cfg/MatchZy/whitelist.cfg
 
-          # Gamedata (signatures/offsets used by MatchZy since 0.9.0)
+          # gamedata, needed since 0.9.0
           mkdir -p package/addons/counterstrikesharp/gamedata
           cp gamedata/matchzy.json package/addons/counterstrikesharp/gamedata/
           
-          # Zip it
           cd package && zip -r ../MatchZy-$MATCHZY_VERSION.zip * && cd ..
 
       - name: Upload Build Artifact
