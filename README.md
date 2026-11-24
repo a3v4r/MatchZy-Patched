@@ -3,6 +3,26 @@ MatchZy - Match Plugin for CS2!
 
 MatchZy is a plugin for CS2 (Counter Strike 2) for running and managing practice/pugs/scrims/matches with easy configuration!
 
+> **This is a fork** of [shobhit-pathak/MatchZy](https://github.com/shobhit-pathak/MatchZy) for LAN tournaments, used by [Matchdesk](https://github.com/a3v4r/Matchdesk). The fork notes come first; everything from "Feature Highlights" on is the original description.
+
+## What is different from the original
+
+- **Russian by default.** Messages use `matchzy_language` (`cfg/MatchZy/config.cfg`, default `ru`) instead of the CounterStrikeSharp `ServerLanguage`. Set `en` or any other file name from `lang/`, or leave it empty to follow `ServerLanguage` as the original does.
+- **Works on Windows servers.** Demo recording (`tv_record`) and round backups (`mp_backup_*`) use paths relative to `csgo/`. CS2 on Windows rejects absolute paths, so with the original no demo and no round backup is written there.
+- **Round restore for matches without a config.** `get5_status` also reports a match started with `.ready` or `css_start` (state, match id, round, scores), so a panel can list and restore its round backups.
+- **More in `get5_status` for panels:** `round_clock` with the in-game timer (phase and seconds left), and the right team scores during the halftime break.
+- **Settings from `config.cfg` always apply.** It runs on the next frame after the plugin loads; on a cold server start the original could run it too early and silently ignore the settings.
+- **Tournament defaults:** 4 tactical timeouts of 20 s per map and none added in overtime (`live.cfg`); one technical pause per team per map, which either team can end after 15 minutes; neutral `[Server]` chat prefix and `{TEAM1} vs {TEAM2}` hostname; no credits message at match start.
+- **Whitelist:** a match config with an empty player list lets everyone in instead of kicking them.
+
+## Install
+
+1. Install [Metamod:Source](https://www.sourcemm.net/downloads.php?branch=dev) and [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/releases) (the `with-runtime` build).
+2. Download `MatchZy-<version>.zip` from [Releases](https://github.com/a3v4r/MatchZy-Patched/releases) and extract it into `game/csgo` (it contains `addons/` and `cfg/`).
+3. Restart the server. Settings are in `cfg/MatchZy/config.cfg`.
+
+[Matchdesk](https://github.com/a3v4r/Matchdesk) installs and updates the plugin by itself.
+
 [![Discord](https://discordapp.com/api/guilds/1169549878490304574/widget.png?style=banner2)](https://discord.gg/2zvhy9m7qg)
 
 ## Feature Highlights:
